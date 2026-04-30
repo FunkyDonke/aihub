@@ -2,8 +2,8 @@ name: Build & Release APK
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
@@ -26,36 +26,11 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build Debug APK (no signing needed)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Decode Keystore
-        if: startsWith(github.ref, 'refs/tags/')
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
-
-      - name: Build Release APK
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          KEYSTORE_FILE: ${{ github.workspace }}/keystore.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: ./gradlew assembleRelease
-
-      - name: Upload Debug APK (manual trigger)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
           name: AI-Hub-Debug
           path: app/build/outputs/apk/debug/*.apk
-
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: app/build/outputs/apk/release/*.apk
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
